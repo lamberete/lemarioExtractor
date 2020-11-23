@@ -5,6 +5,7 @@ from enum import Enum
 import sys
 import subprocess
 import json
+import re
 
 class Mode(Enum):
   LOWER   = 0  # some
@@ -14,9 +15,9 @@ class Mode(Enum):
 user = "p682JghS3"
 password = "aGfUdCiE434"
 
-alphabet = ["-", "a", "á", "b", "c", "d", "e", "é", "f", "g", "h", 
-  "i", "í", "j", "k", "l", "m", "n", "ñ", "o", "ó", "p", "q", "r", 
-  "s", "t", "u", "ú", "ü", "v", "w", "x", "y", "z"]
+alphabet = ["-", "‒", "a", "á", "b", "c", "d", "e", "é", "f", "g", 
+  "h", "i", "í", "j", "k", "l", "m", "n", "ñ", "o", "ó", "p", "q", 
+  "r", "s", "t", "u", "ú", "ü", "v", "w", "x", "y", "z"]
 maxRaeResults = 200
 
 # returns alphabetically next longer prefix
@@ -51,7 +52,7 @@ def getRaeWords(prefix):
   return jsonResult['res']
 
 # checks if the prefix(word) exists among the received words taking into account html tags 
-def isRaeWord(word, words):
+def getRaeWord(prefix, words):
   for i in words:
     val = i['header']
     firstTag = val.find('<')
@@ -62,9 +63,18 @@ def isRaeWord(word, words):
       # keep text within first tag
       endTag = val.find('<', firstTag+1)
       val = val[firstTag+1:endTag-1]
-    if val == word:
-      return 1
-  return 0
+    if val == prefix:
+      return i
+  return None
+
+# prints lema and id in a csv format
+def printRaeWord(word):
+  # remove markups from header
+  p = re.compile('(<i>)?([^<.]*)\.?(</i>)?(<sup>.*</sup>)?([^<.]*).') #regex to return the lema, ignoring <i> markup and removing <sup> ones
+  m = p.match(word['header'])
+  lema = m.group(2) + m.group(5)
+  # print lema and id
+  print("\"{0}\", \"{1}\"".format(lema, word['id'], flush = True))
 
 # extracts alphabetically rae lemario starting with a given prefix
 def getLemario(prefix = alphabet[0], mode = Mode.LOWER):
@@ -84,16 +94,15 @@ def getLemario(prefix = alphabet[0], mode = Mode.LOWER):
     print("{0}: {1}".format(prefix, groups), file=sys.stderr, flush=True)
     # get back to lower case to avoid errors on next/longerPrefix methods
     prefix = prefix.lower()
+    # send founded words (if any) to the output
+    for word in words:
+      printRaeWord(word)
+
     if groups >= maxRaeResults-1:
       # too many groups for this prefix, try with a longer one
-      # but first check if current prefix is a word, if so, send it to the output
-      if isRaeWord(prefix, words):
-        print(prefix)
+      # duplicates will be removed in post processing
       prefix = longerPrefix(prefix)
     else:
-      # send founded words (if any) to the output
-      for word in words:
-        print(word, flush=True)
       prefix = nextPrefix(prefix)
 
 # lets rock'n'roll
