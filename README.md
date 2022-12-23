@@ -1,4 +1,4 @@
-# lemarioExtactor
+# lemarioExtractor
 A python script to extract all RAE dictionary entries, a.k.a. Spanish lemario.
 
 (VER ABAJO PARA ESPAÑOL)
